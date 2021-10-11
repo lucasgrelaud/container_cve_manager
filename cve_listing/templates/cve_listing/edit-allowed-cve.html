@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}{{ allowed_cve.cve_id }} - {{ block.super }}{% endblock %}
+{% block content %}
+    <div class="row">
+        <h2 style="margin-top: 2rem">CVE AllowList</h2>
+        {% if user.is_staff %}
+            {% if result %}
+                {% if result.state == 'success' %}
+                    <div class="alert alert-success d-flex align-items-center" role="alert">
+                        <i class="fa fa-check-circle" style="margin-right: 1rem"></i>
+                        <div>
+                            {{ result.message }}
+                        </div>
+                    </div>
+                {% elif result.state == 'error' %}
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="fa fa-exclamation-triangle" style="margin-right: 1rem"></i>
+                        <div>
+                            {{ result.message }}
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="cve_id" class="form-label">CVE id</label>
+                    <input type="text" class="form-control" id="cve_id" name="cve_id" value="{{ allowed_cve.cve_id }}"
+                           disabled>
+                </div>
+                <div class="mb-3">
+                    <label for="date" class="form-label">Date</label>
+                    <input type="date" class="form-control" id="date" name="date"
+                           value="{{ allowed_cve.date|date:"Y-m-d" }}">
+                </div>
+                <div class="mb-3">
+                    <label for="added_by" class="form-label">Added By</label>
+                    <input type="text" class="form-control" id="added_by" name="added_by"
+                           value="{{ allowed_cve.added_by }}">
+                </div>
+                <div class="mb-3">
+                    <label for="reason" class="form-label">Reason</label>
+                    <select class="selectpicker form-control" title="Select a reason"
+                            id="reason" name="reason" required>
+                        {% for choice in select %}
+                            <option value="{{ choice.value }}" {% if allowed_cve.reason == choice.value %}
+                                    selected{% endif %}>{{ choice.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="comment" class="form-label">Comment</label>
+                    <textarea class="form-control" id="comment" name="comment">{{ allowed_cve.comment }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        {% else %}
+            <h3>You must be an admin to edit CVEs</h3>
+        {% endif %}
+    </div>
+
+{% endblock %}
+{% block custom_script %}
+    {{ block.super }}
+    <script type="application/javascript">
+        // Set global config
+        $.fn.selectpicker.Constructor.BootstrapVersion = '5';
+        $('.selectpicker').selectpicker('refresh');
+    </script>
+{% endblock %}

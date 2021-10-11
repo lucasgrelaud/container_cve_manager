@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Manage AllowList - {{ block.super }}{% endblock %}
+{% block content %}
+    <div class="row">
+        <h2 style="margin-top: 2rem">CVE AllowList</h2>
+        {% if user.is_staff %}
+            <table
+                    data-toggle="table"
+                    data-search="true"
+                    data-locale="en-US"
+                    data-show-columns="true">
+                <thead>
+                <tr class="tr-class-1">
+                    <th data-field="name" rowspan="2" data-valign="middle">CVE</th>
+                    <th colspan="5">Detail</th>
+                </tr>
+                <tr class="tr-class-2">
+                    <th data-field="date">Date</th>
+                    <th data-field="added_by">Added by</th>
+                    <th data-field="reason">Reason</th>
+                    <th data-field="comment">Comment</th>
+                    <th data-field="action">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for cve in allowed_cve %}
+                    <tr id="tr-id-{{ forloop.counter }}" class="tr-class-{{ forloop.counter }}"
+                        data-object='{"key": "value"}'>
+                        <td id="td-id-{{ forloop.counter }}" class="td-class-{{ forloop.counter }}">
+                            <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name={{ cve.cve_id }}"
+                               target="_blank">{{ cve.cve_id }}</a>
+                        </td>
+                        <td>{{ cve.date }}</td>
+                        <td>{{ cve.added_by }}</td>
+                        <td>{{ cve.reason }}</td>
+                        <td>{{ cve.comment }}</td>
+                        <td>
+                            <a class="btn btn-primary" href="{% url 'cve_listing:edit_allowed_cve' cve.cve_id %}"
+                               role="button">
+                                <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                Edit
+                            </a>
+                            <a class="btn btn-danger" href="{% url 'cve_listing:delete_allowed_cve' cve.cve_id %}"
+                               role="button">
+                                <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+
+                </tbody>
+            </table>
+        {% else %}
+            <h3>You must be an admin to manage CVEs</h3>
+        {% endif %}
+    </div>
+
+{% endblock %}
+{% block custom_script %}
+    {{ block.super }}
+    <script type="application/javascript">
+
+    </script>
+{% endblock %}

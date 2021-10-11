@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% block title %}CVE Listing - {{ block.super }}{% endblock %}
+{% block content %}
+    <div class="row" style="margin-top: 1rem">
+        <form class="d-inline-flex mb-3">
+            <select class="selectpicker m-2" data-live-search="true" title="Select a base image..."
+                    data-style="btn-primary"
+                    id="select_base_image">
+            </select>
+            <select class="selectpicker m-2" data-live-search="true" title="Select a version..."
+                    id="select_base_image_version" disabled>
+            </select>
+            <button type="button" class="btn btn-success m-2 ms-auto" id="search_base_image_cve" disabled>
+                <i class="bi bi-search"></i> Search CVE
+            </button>
+        </form>
+        <div class="row">
+            <h4 id="base_image_title">project/image</h4>
+            <div class="toolbar base-image">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="filter_not_fixed_base_image" checked>
+                    <label class="form-check-label" for="filter_not_fixed_base_image">Show not fixed CVE</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="filter_allowed_base_image" checked>
+                    <label class="form-check-label" for="filter_allowed_base_image">Show CVE in AllowList</label>
+                </div>
+            </div>
+            <table
+                    id="base_image_table"
+                    data-toggle="table"
+                    data-locale="en-US"
+                    data-toolbar=".toolbar.base-image"
+                    data-toolbar-align="left"
+                    data-show-refresh="false"
+                    data-show-columns="true"
+                    data-pagination="true"
+                    data-flat="true"
+                    data-search="true"
+                    data-detail-view="true"
+                    data-detail-formatter="detailFormatter">
+                <thead>
+                <tr>
+                    <th data-field="id" data-sortable="true">CVE id</th>
+                    <th data-field="package" data-sortable="true">Package</th>
+                    <th data-field="version" data-sortable="true">Version</th>
+                    <th data-field="fix_version" data-sortable="true">Fixed Version</th>
+                    <th data-field="severity" data-sortable="true">Severity</th>
+                    <th data-field="allowed" data-sortable="true">In AllowList</th>
+                    {% if user.is_staff %}
+                    <th data-field="operate" data-formatter="operateFormatterCVE" data-events="operateEventsCVE">
+                        Actions
+                    </th>
+                    {% endif %}
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+    <hr style="margin-top: 3rem; margin-bottom: 3rem; border: solid 0.2rem slategray; border-radius: 10px">
+    <div class="row" style="margin-top: 1rem">
+        <form class="d-inline-flex mb-3">
+            <select class="selectpicker m-2" data-live-search="true" title="Select a project..."
+                    data-style="btn-primary"
+                    id="select_app_project">
+            </select>
+            <select class="selectpicker m-2" data-live-search="true" title="Select an image..."
+                    data-style="btn-info"
+                    id="select_project_image" disabled>
+            </select>
+            <select class="selectpicker m-2" data-live-search="true" title="Select a version..."
+                    id="select_project_image_version" disabled>
+            </select>
+            <button type="button" class="btn btn-success m-2 ms-auto" id="search_project_image_cve" disabled>
+                <i class="bi bi-search"></i> Search CVE
+            </button>
+        </form>
+        <div class="row">
+            <h4 id="project_image_title">project/image</h4>
+            <div class="toolbar project-image">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="filter_not_fixed_project_image" checked>
+                    <label class="form-check-label" for="filter_not_fixed_project_image">Show not fixed CVE</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="filter_allowed_project_image" checked>
+                    <label class="form-check-label" for="filter_allowed_project_image">Show CVE in AllowList</label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="filter_base_image_cve" checked>
+                    <label class="form-check-label" for="filter_base_image_cve">Show CVE inherited from base
+                        image</label>
+                </div>
+            </div>
+            <table
+                    id="project_image_table"
+                    data-toggle="table"
+                    data-locale="en-US"
+                    data-toolbar=".toolbar.project-image"
+                    data-toolbar-align="left"
+                    data-show-refresh="false"
+                    data-show-columns="true"
+                    data-pagination="true"
+                    data-flat="true"
+                    data-search="true"
+                    data-detail-view="true"
+                    data-detail-formatter="detailFormatter">
+                <thead>
+                <tr>
+                    <th data-field="id" data-sortable="true">CVE id</th>
+                    <th data-field="package" data-sortable="true">Package</th>
+                    <th data-field="version" data-sortable="true">Version</th>
+                    <th data-field="fix_version" data-sortable="true">Fixed Version</th>
+                    <th data-field="severity" data-sortable="true">Severity</th>
+                    <th data-field="allowed" data-sortable="true">In AllowList</th>
+                    {% if user.is_staff %}
+                    <th data-field="operate" data-formatter="operateFormatterCVE" data-events="operateEventsCVE">
+                        Actions
+                    </th>
+                    {% endif %}
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+    <div class="modal fade" id="addCVEAllowList" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+         aria-labelledby="addCVEAllowList_Label" aria-hidden="true">
+        <div class="modal-dialog">
+            <form role="form" class="modal-content" data-toggle="validator" id="addCVEAllowList_form">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCVEAllowList_Label">Add CVE to AllowList</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col">
+                            <label for="addCVEAllowList_CVEid" class="form-label">CVE id</label>
+                            <input type="text" class="form-control" id="addCVEAllowList_CVEid"
+                                   placeholder="CVE-2021-..." required disabled>
+                        </div>
+                        <div class="col">
+                            <label for="addCVEAllowList_author" class="form-label">Added by</label>
+                            <input type="text" class="form-control" id="addCVEAllowList_author"
+                                   placeholder="John Doe" required maxlength="40">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label for="addCVEAllowList_date" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="addCVEAllowList_date" required>
+                        </div>
+                        <div class="col">
+                            <label for="addCVEAllowList_reason" class="form-label">Reason</label>
+                            <select class="selectpicker form-control" title="Select a reason"
+                                    id="addCVEAllowList_reason" required>
+                                {% for choice in select %}
+                                    <option value="{{ choice.value }}">{{ choice.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label for="addCVEAllowList_comment" class="form-label">Comment</label>
+                            <textarea class="form-control" id="addCVEAllowList_comment"
+                                      name="comment"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary" id="addCVEAllowList_submit" type="submit">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="modal fade" id="removeCVEAllowList" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+         aria-labelledby="removeVEAllowList_Label" aria-hidden="true">
+        <div class="modal-dialog">
+            <form role="form" id="removeCVEAllowList_form" class="modal-content">
+
+                <input type="hidden" id="removeCVEAllowList_row_id">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeCVEAllowList_Label">Remove CVE from AllowList</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure to remove the <code id="removeCVEAllowList_code">CVE_id</code> from the AllowList?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Remove</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="liveToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <i class="fa fa-info" aria-hidden="true"></i>&nbsp;
+                <strong class="me-auto">Information</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                Toast message
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block custom_script %}
+    {{ block.super }}
+    <script type="application/javascript">
+        // Set global config
+        $.fn.selectpicker.Constructor.BootstrapVersion = '5';
+        $('.selectpicker').selectpicker('refresh');
+
+        /*
+            =================Start=================
+                 Logic for the base-images HMI
+            =================Start=================
+         */
+        // Get list of base images and populate the selector
+        $.getJSON('/api/base-image')
+            .done(function (data) {
+                $.each((data.image), function (i, image) {
+                    $('#select_base_image').append(
+                        $('<option>')
+                            .val(image.replace('base/', '').replace('/', '%252F'))
+                            .text(image)
+                    )
+                });
+                $('#select_base_image').selectpicker('refresh');
+            });
+
+        // Enable and populate tag select
+        $('#select_base_image').on('change', function () {
+            // reset interface
+            $('#search_base_image_cve').prop('disabled', true);
+            $('#base_image_title').text(`base/image`);
+            $('#base_image_table').bootstrapTable('removeAll');
+
+            // Fetch tags
+            let selected_image = $('#select_base_image').val();
+            $.getJSON(`/api/base-image/${selected_image}/tag`)
+                .done(function (data) {
+                    // Clear options
+                    $('#select_base_image_version').empty();
+                    // Fill with image options
+                    $.each((data.tag), function (i, tag) {
+                        $('#select_base_image_version')
+                            .append($('<option>').val(tag).text(tag))
+                    });
+                })
+                .then(function () {
+                    $('#select_base_image_version')
+                        .prop('disabled', false)
+                        .selectpicker('refresh');
+                });
+        });
+
+        // Search for vulnerabilities of base image
+        $("#select_base_image_version").on('change', function () {
+            let $base_image_version = $('#select_base_image_version')
+            if ($base_image_version.val()) {
+                $('#search_base_image_cve').prop('disabled', false);
+            } else {
+                $('#search_base_image_cve').prop('disabled', true);
+            }
+            if ($base_image_version.val() && $('#select_project_image_version').val()) {
+                $('#search_project_image_cve').prop('disabled', false);
+            } else {
+                $('#search_project_image_cve').prop('disabled', true);
+            }
+        });
+        $('#search_base_image_cve').on('click', function () {
+            let selected_image = $('#select_base_image').val();
+            let selected_tag = $('#select_base_image_version').val();
+            // Update table title
+            $('#base_image_title').text(`base/${selected_image.replace('%252F', '/')}@${selected_tag}`);
+            // reset filters
+            $('#filter_not_fixed_base_image').prop("checked", true);
+            $('#filter_allowed_base_image').prop("checked", true);
+            // Update table content
+            $('#base_image_table').bootstrapTable('refreshOptions', {
+                url: `/api/base-image/${selected_image}/tag/${selected_tag}/vulnerabilities`
+            });
+        });
+
+        function detailFormatter(index, row) {
+            var html = []
+            html.push(`<b>Description</b></br><p>${row.description}</p>`)
+            html.push(`<b>Links</b></br><p>${row.links}</p>`)
+            return html.join('')
+        }
+
+        // Filter base image data for non fixed vulnerabilities
+        $('.base-image .form-check-input').on('change', function () {
+            let not_fixed = $('#filter_not_fixed_base_image').prop("checked");
+            let not_allowed = $('#filter_allowed_base_image').prop("checked");
+            let url = $('#base_image_table').bootstrapTable('getOptions').url;
+            if (typeof url === "string") {
+                let new_url = url.split('?')[0];
+                new_url += `?not_fixed=${not_fixed}&not_allowed=${not_allowed}`;
+                $('#base_image_table').bootstrapTable('refreshOptions', {
+                    url: new_url
+                });
+            }
+        });
+
+        /*
+            =================End=================
+                 Logic for the base-images HMI
+            =================End=================
+         */
+        /*
+            =================Start=================
+              Logic for the applicative-images HMI
+            =================Start=================
+         */
+        // Get list of project and populate the selector
+        $.getJSON('/api/project')
+            .done(function (data) {
+                if (data.base) {
+                    delete data.base;
+                }
+                $.each(data, function (key, val) {
+                    $('#select_app_project').append(
+                        $('<option>')
+                            .val(key)
+                            .text(key)
+                    )
+                });
+                $('#select_app_project').selectpicker('refresh');
+            });
+
+        // Enable and populate image select
+        $('#select_app_project').on('change', function () {
+            // reset interface
+            $('#project_image_title').text(`project/image`);
+            $('#project_image_table').bootstrapTable('removeAll');
+            $('#search_project_image_cve').prop('disabled', true);
+
+            // Populate image select
+            let selected_project = $('#select_app_project').val();
+            $.getJSON(`/api/project/${selected_project}/image`)
+                .done(function (data) {
+                    // Clear options
+                    $('#select_project_image').empty();
+                    // Fill with image options
+                    $.each((data.image), function (i, image) {
+                        $('#select_project_image')
+                            .append($('<option>')
+                                .val(image.replace(`${selected_project}/`, '').replace('/', '%252F'))
+                                .text(image));
+                    });
+                })
+                .then(function () {
+                    $('#select_project_image')
+                        .prop('disabled', false)
+                        .selectpicker('refresh');
+                });
+            // Clear tag select
+            $('#select_project_image_version')
+                .empty()
+                .prop('disabled', true)
+                .selectpicker('refresh');
+        });
+        // Enable and populate image tag select
+        $('#select_project_image').on('change', function () {
+            // reset interface
+            $('#project_image_title').text(`project/image`);
+            $('#project_image_table').bootstrapTable('removeAll');
+            $('#search_project_image_cve').prop('disabled', true);
+
+            // Populate image select
+            let selected_project = $('#select_app_project').val();
+            let selected_image = $('#select_project_image').val();
+            $.getJSON(`/api/project/${selected_project}/image/${selected_image}/tag`)
+                .done(function (data) {
+                    // Clear options
+                    $('#select_project_image_version').empty();
+                    // Fill with image options
+                    $.each((data.tag), function (i, tag) {
+                        $('#select_project_image_version')
+                            .append($('<option>')
+                                .val(tag)
+                                .text(tag));
+                    });
+                })
+                .then(function () {
+                    $('#select_project_image_version')
+                        .prop('disabled', false)
+                        .selectpicker('refresh');
+                });
+        });
+        // Search for vulnerabilities of base image
+        $("#select_project_image_version").on('change', function () {
+            if ($('#select_base_image_version').val() && $('#select_project_image_version').val()) {
+                $('#search_project_image_cve').prop('disabled', false);
+            } else {
+                $('#search_project_image_cve').prop('disabled', true);
+            }
+        });
+
+        // Add search
+        $('#search_project_image_cve').on('click', function () {
+            let selected_project = $('#select_app_project').val();
+            let selected_project_image = $('#select_project_image').val();
+            let selected_project_image_tag = $('#select_project_image_version').val();
+            // Update table title
+            $('#project_image_title').text(`${selected_project}/${selected_project_image.replace('%252F', '/')}@${selected_project_image_tag}`);
+            // reset filters
+            $('#filter_not_fixed_project_image').prop("checked", true);
+            $('#filter_allowed_base_image').prop("checked", true);
+            $('#filter_base_image_cve').prop("checked", true);
+            // Update table content
+            $('#project_image_table').bootstrapTable('refreshOptions', {
+                url: `/api/project/${selected_project}/image/${selected_project_image}/tag/${selected_project_image_tag}/vulnerabilities`
+            });
+        });
+
+        // Filter base image data for non fixed vulnerabilities
+        $('.project-image .form-check-input').on('change', function () {
+            let not_fixed = $('#filter_not_fixed_project_image').prop("checked");
+            let not_allowed = $('#filter_allowed_project_image').prop("checked");
+            let base_image_cve = $('#filter_base_image_cve').prop("checked");
+            let url = $('#project_image_table').bootstrapTable('getOptions').url;
+            if (typeof url === "string") {
+                let new_url = url.split('?')[0];
+                if (base_image_cve) {
+
+                    new_url += `?not_fixed=${not_fixed}&not_allowed=${not_allowed}`
+                } else {
+                    let selected_image = $('#select_base_image').val();
+                    let selected_tag = $('#select_base_image_version').val();
+                    new_url += `?base_image=${selected_image}&tag=${selected_tag}&not_fixed=${not_fixed}&not_allowed=${not_allowed}`
+                }
+                $('#project_image_table').bootstrapTable('refreshOptions', {
+                    url: new_url
+                });
+            }
+        });
+
+        //
+        /*
+            =================End===================
+              Logic for the applicative-images HMI
+            =================End===================
+         */
+        // Add modal event to add/ remove CVE from allowlist
+        function operateFormatterCVE(value, row, index) {
+            var html = []
+            if (row.allowed === 'True') {
+                html.push(
+                    '<a class="edit" href="javascript:void(0)" title="Edit in AllowList">',
+                    '<i class="fa fa-pencil-square-o "></i>',
+                    '</a>',
+                    '<a class="remove" href="javascript:void(0)" title="Remove from AllowList">',
+                    '<i class="fa fa-minus-square-o"></i>',
+                    '</a>'
+                );
+            } else {
+                html.push(
+                    '<a class="add" href="javascript:void(0)" title="Add to AllowList">',
+                    '<i class="fa fa-plus-square-o"></i>',
+                    '</a>'
+                );
+            }
+            return html.join('');
+        }
+
+        window.operateEventsCVE = {
+            'click .add': function (e, value, row, index) {
+                $('#addCVEAllowList_CVEid').val(row.id);
+                $('#addCVEAllowList_submit').text('Add');
+                $('#addCVEAllowList_author').val("{{ user.username }}");
+                $('#addCVEAllowList_date').val("");
+                $(`#addCVEAllowList_reason option:selected`).prop('selected', false);
+                $(`#addCVEAllowList_reason`).selectpicker('refresh');
+                $('#addCVEAllowList_comment').val("");
+                $('#addCVEAllowList').modal('show');
+            },
+            'click .edit': function (e, value, row, index) {
+                $.getJSON(`/api/allowed-cve/${row.id}`)
+                    .done(function (data) {
+                        $('#addCVEAllowList_CVEid').val(data.id);
+                        $('#addCVEAllowList_author').val(data.added_by);
+                        $('#addCVEAllowList_date').val(data.date);
+                        $(`#addCVEAllowList_reason option[value=${data.reason}]`).prop('selected', true);
+                        $('#addCVEAllowList_comment').val(data.comment);
+                        $('#addCVEAllowList_submit').text('Update');
+                    })
+                    .then(function () {
+                        $('#addCVEAllowList_reason').selectpicker('refresh');
+                        $('#addCVEAllowList').modal('show');
+                    });
+            },
+            'click .remove': function (e, value, row, index) {
+                $('#removeCVEAllowList_code').text(row.id);
+                $('#removeCVEAllowList').modal('show');
+            },
+        }
+        $('#addCVEAllowList_form').submit(function (event) {
+            let csrftoken = '{{ csrf_token }}';
+            let formData = {
+                cve_id: $("#addCVEAllowList_CVEid").val(),
+                added_by: $("#addCVEAllowList_author").val(),
+                date: $('#addCVEAllowList_date').val(),
+                reason: $('#addCVEAllowList_reason option:selected').val(),
+                comment: $('#addCVEAllowList_comment').val(),
+            };
+            let METHOD;
+            let URL;
+            let $submit = $('#addCVEAllowList_submit');
+            if ($submit.text() === "Add") {
+                METHOD = 'POST'
+                URL = '/api/allowed-cve'
+            } else if ($submit.text() === "Update") {
+                METHOD = 'POST'
+                URL = `/api/allowed-cve/${formData.cve_id}`
+            }
+            if (METHOD) {
+                $.ajax({
+                    type: METHOD,
+                    url: URL,
+                    data: formData,
+                    dataType: 'json',
+                    encode: true,
+                    headers: { "X-CSRFToken": csrftoken },
+                    error: function (xhr, status, error) {
+                        let $toast = $('.toast');
+                        $toast.find('i').attr('class', 'fa fa-exclamation-triangle');
+                        $toast.find('strong').text("Error");
+                        $toast.find('.toast-body').text(xhr.status + ': ' + xhr.statusText);
+                        $('#addCVEAllowList').modal('hide');
+                        $toast.toast('show');
+                    },
+                })
+                    .done(function () {
+                        let $toast = $('.toast');
+                        $toast.find('i').attr('class', 'fa fa-check-square');
+                        if ($submit.text() === "Add") {
+                            $toast.find('strong').text("CVE added");
+                            $toast.find('.toast-body').text('The CVE have been added to the AllowList with success!');
+                        } else if ($submit.text() === "Update") {
+                            $toast.find('strong').text("CVE updated");
+                            $toast.find('.toast-body').text('The CVE have been updated successfully!');
+                        }
+
+                        $('#addCVEAllowList').modal('hide');
+                        $toast.toast('show');
+
+                    });
+            }
+
+            event.preventDefault();
+        })
+
+        $('#removeCVEAllowList_form').submit(function (event) {
+            let csrftoken = '{{ csrf_token }}';
+            cve_id = $('#removeCVEAllowList_code').text();
+            $.ajax({
+                type: 'POST',
+                url: `/api/allowed-cve/${cve_id}/delete`,
+                dataType: 'json',
+                encode: true,
+                headers: { "X-CSRFToken": csrftoken },
+                error: function (xhr, status, error) {
+                    let $toast = $('.toast');
+                    $toast.find('i').attr('class', 'fa fa-exclamation-triangle');
+                    $toast.find('strong').text("Error");
+                    $toast.find('.toast-body').text(xhr.status + ': ' + xhr.statusText);
+                    $('#removeCVEAllowList').modal('hide');
+                    $toast.toast('show');
+                }
+            })
+                .done(function () {
+                    let $toast = $('.toast');
+                    $toast.find('i').attr('class', 'fa fa-check-square');
+                    $toast.find('strong').text("CVE deleted");
+                    $toast.find('.toast-body').text('The CVE have been successfully delete from the AllowList.');
+                    $('#removeCVEAllowList').modal('hide');
+                    $toast.toast('show');
+                });
+            event.preventDefault();
+        });
+
+
+    </script>
+{% endblock %}

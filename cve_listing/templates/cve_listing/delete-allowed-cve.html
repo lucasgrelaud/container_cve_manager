@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}{{ allowed_cve.cve_id }} - {{ block.super }}{% endblock %}
+{% block content %}
+    <div class="row">
+        <h2 style="margin-top: 2rem">CVE AllowList</h2>
+        {% if user.is_staff %}
+            {% if result %}
+                {% if result.state == 'success' %}
+                    <div class="alert alert-success d-flex align-items-center" role="alert">
+                        <i class="fa fa-check-circle" style="margin-right: 1rem"></i>
+                        <div>
+                            {{ result.message }}
+                        </div>
+                    </div>
+                {% elif result.state == 'error' %}
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="fa fa-exclamation-triangle" style="margin-right: 1rem"></i>
+                        <div>
+                            {{ result.message }}
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <p>Are you sure to remove the <code id="removeCVEAllowList_code">{{ allowed_cve.cve_id }}</code> from
+                    the AllowList?</p>
+                <button type="submit" class="btn btn-danger">Delete CVE</button>
+            </form>
+        {% else %}
+            <h3>You must be an admin to delete CVEs</h3>
+        {% endif %}
+    </div>
+
+{% endblock %}
+{% block custom_script %}
+    {{ block.super }}
+    <script type="application/javascript">
+        // Set global config
+        $.fn.selectpicker.Constructor.BootstrapVersion = '5';
+        $('.selectpicker').selectpicker('refresh');
+    </script>
+{% endblock %}
